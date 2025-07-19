@@ -1,0 +1,81 @@
+# Git files
+.git
+.gitignore
+
+# Documentation
+*.md
+
+# Python cache and build artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Certbot data (not needed in build)
+certbot/
+
+# Credentials (security)
+*.ini
+!*.ini.example
+*.key
+*.pem
+*.crt
+
+# Docker files (not needed in image)
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+.tmp/
+temp/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
