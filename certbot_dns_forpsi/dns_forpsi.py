@@ -21,6 +21,7 @@ class Authenticator(dns_common.DNSAuthenticator):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.credentials: Optional[dns_common.CredentialsConfiguration] = None
+        self._client = None
 
     @classmethod
     def add_parser_arguments(cls, add: Callable[..., None]) -> None:
@@ -41,7 +42,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         cli_password = self.conf("password")
         cli_totp_secret = self.conf("totp-secret")
         
-        logger.debug(f"CLI parameters - admin-site: {cli_admin_site}, username: {cli_username}, password: {'***' if cli_password else None}")
+        logger.debug(f"CLI parameters - admin-site: {cli_admin_site}, username: {cli_username}, password: {'***' if cli_password else None}, totp-secret: {'***' if cli_totp_secret else None}")
         
         # If CLI parameters are provided, use them
         if cli_admin_site and cli_username and cli_password:
@@ -77,6 +78,7 @@ class Authenticator(dns_common.DNSAuthenticator):
             )
 
     def _perform(self, domain: str, validation_name: str, validation: str) -> None:
+        logger.debug(f"Performing DNS challenge for domain: {domain}, validation_name: {validation_name} value: {validation}")
         client = self._get_forpsi_client()
         client._authenticate()
         client.add_txt_record(domain, validation_name, validation)
@@ -84,14 +86,17 @@ class Authenticator(dns_common.DNSAuthenticator):
     def _cleanup(self, domain: str, validation_name: str, validation: str) -> None:
         try:
             client = self._get_forpsi_client()
-            if not client._authenticated:
-                client._authenticate()
+            client._authenticate()
             client.del_txt_record(domain, validation_name, validation)
         except Exception as e:
             logger.warning(f"Cleanup failed: {e}")
             # Don't raise the exception - cleanup failures shouldn't break certbot
 
     def _get_forpsi_client(self) -> "_ForpsiClient":
+        
+        if self._client is not None:
+            return self._client
+        
         if not self.credentials:
             raise errors.PluginError("Plugin has not been prepared.")
         
@@ -106,12 +111,13 @@ class Authenticator(dns_common.DNSAuthenticator):
         if not password:
             raise errors.PluginError("Password is required. Please specify --dns-forpsi-password or add password to credentials file.")
         
-        return _ForpsiClient(
+        self._client = _ForpsiClient(
             admin_site,
             username,
             password,
             self.credentials.conf("totp_secret") if self.credentials.conf("totp_secret") else None,
         )
+        return self._client
 
 
 class _ForpsiClient:
@@ -143,6 +149,12 @@ class _ForpsiClient:
         """
         Authenticate with Forpsi admin interface using the two-step process
         """
+
+        if self._authenticated:
+            logger.debug("Already authenticated with Forpsi, skipping authentication")
+            return
+
+        logger.debug(f"Authenticating to Forpsi admin site: {self.admin_site} with username: {self.username}")
         try:
             # Step 1: Get initial session cookie
             logger.debug("Getting initial session cookie from Forpsi")
