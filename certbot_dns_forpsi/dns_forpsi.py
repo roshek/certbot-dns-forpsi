@@ -66,7 +66,6 @@ class Authenticator(dns_common.DNSAuthenticator):
                     "admin_site": "Forpsi admin site (e.g., admin.forpsi.com)",
                     "username": "Forpsi username",
                     "password": "Forpsi password",
-                    "totp_secret": "Forpsi TOTP secret (optional)",
                 },
             )
             
@@ -199,6 +198,12 @@ class _ForpsiClient:
             if response.status_code != 200:
                 raise errors.PluginError(f"Login failed with status {response.status_code}. Please check your credentials and try again.")
             
+            # Without 2FA the first step already logs in (FAUTH cookie set), and the page can contain unrelated alert( JavaScript, e.g. on admin.forpsi.sk
+            if not self.totp_secret and any(cookie.name == 'FAUTH' for cookie in self.session.cookies):
+                logger.info("Successfully authenticated with Forpsi")
+                self._authenticated = True
+                return
+
             # if the response body has an alert javascript, it means the login failed, print the alert message
             if 'alert(' in response.text:
                 start = response.text.find('alert(') + len('alert(')
